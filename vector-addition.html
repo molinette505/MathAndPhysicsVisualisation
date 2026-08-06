@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vector Addition Interactive Simulation - Head to Tail Method</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        vecA: '#06b6d4',  // Cyan
+                        vecB: '#a855f7',  // Purple
+                        vecC: '#10b981',  // Emerald
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- MathJax for LaTeX mathematical expressions -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            touch-action: manipulation;
+        }
+        canvas {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+        .glow-purple { box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+        .glow-emerald { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-slate-950">
+
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-30 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Back to Home">
+                    <i class="fa-solid fa-house text-sm"></i>
+                </a>
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-purple-500 to-emerald-500 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg">
+                    <i class="fa-solid fa-arrow-trend-up text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold tracking-wide flex items-center gap-2">
+                        Vector Addition <span class="text-xs font-mono font-normal px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-400">Head-to-Tail</span>
+                    </h1>
+                    <p class="text-[11px] sm:text-xs text-slate-400">Drag vector tips or adjust inputs to see animated vector sum</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="triggerAdditionAnimation()" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-play"></i> Replay
+                </button>
+                <button onclick="resetVectors()" class="px-2.5 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl transition">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container: Mobile First Layout -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col gap-4">
+
+        <!-- Canvas Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col gap-3 relative">
+            <div class="flex items-center justify-between text-xs flex-wrap gap-2">
+                <div class="flex items-center gap-3 font-medium">
+                    <span class="flex items-center gap-1.5 text-cyan-400 font-bold">
+                        <span class="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span> Vector A
+                    </span>
+                    <span class="flex items-center gap-1.5 text-purple-400 font-bold">
+                        <span class="w-3 h-3 rounded-full bg-purple-400 inline-block"></span> Vector B
+                    </span>
+                    <span class="flex items-center gap-1.5 text-emerald-400 font-bold">
+                        <span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span> Resultant C (A + B)
+                    </span>
+                </div>
+                <div class="text-[11px] font-mono text-slate-500 hidden sm:block">
+                    Touch & drag circle handles at tip of A and B
+                </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-inner">
+                <canvas id="vectorCanvas" class="w-full h-full relative z-10 cursor-crosshair"></canvas>
+
+                <!-- Touch Drag Hint Overlay -->
+                <div id="drag-hint" class="absolute bottom-3 left-3 bg-slate-900/90 border border-slate-800 backdrop-blur-md px-3 py-1.5 rounded-lg text-[11px] text-slate-400 pointer-events-none z-20 flex items-center gap-2">
+                    <i class="fa-solid fa-hand-pointer text-cyan-400 animate-bounce"></i>
+                    Drag vector tips to change components
+                </div>
+
+                <!-- Status Toast Overlay -->
+                <div id="status-toast" class="absolute top-3 right-3 bg-slate-900/90 border border-slate-800 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold z-20 transition-all opacity-0 pointer-events-none">
+                    <!-- Text dynamically injected -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls & Math Breakdown Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+            <!-- LEFT: Manual Inputs & Controls -->
+            <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-4">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-cyan-400"></i> Vector Components Input
+                </h2>
+
+                <!-- Vector A Inputs -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-cyan-950/80 flex flex-col gap-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-cyan-400 flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-right"></i> Vector A Components
+                        </span>
+                        <span id="label-mag-A" class="font-mono text-slate-400 text-[11px]">|A| = 0.0</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-mono text-slate-500 block mb-1">Aₓ (Horizontal)</label>
+                            <input type="number" id="input-Ax" step="0.5" min="-10" max="10" value="4" oninput="onManualInputChange()"
+                                   class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm font-mono text-cyan-300 focus:outline-none focus:border-cyan-500">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-mono text-slate-500 block mb-1">Aᵧ (Vertical)</label>
+                            <input type="number" id="input-Ay" step="0.5" min="-10" max="10" value="3" oninput="onManualInputChange()"
+                                   class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm font-mono text-cyan-300 focus:outline-none focus:border-cyan-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vector B Inputs -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-purple-950/80 flex flex-col gap-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-purple-400 flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-right"></i> Vector B Components
+                        </span>
+                        <span id="label-mag-B" class="font-mono text-slate-400 text-[11px]">|B| = 0.0</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-mono text-slate-500 block mb-1">Bₓ (Horizontal)</label>
+                            <input type="number" id="input-Bx" step="0.5" min="-10" max="10" value="2" oninput="onManualInputChange()"
+                                   class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm font-mono text-purple-300 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-mono text-slate-500 block mb-1">Bᵧ (Vertical)</label>
+                            <input type="number" id="input-By" step="0.5" min="-10" max="10" value="-2" oninput="onManualInputChange()"
+                                   class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm font-mono text-purple-300 focus:outline-none focus:border-purple-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preset Buttons -->
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    <span class="text-[11px] font-mono text-slate-500">Presets:</span>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="setPreset(4, 3, 2, -2)" class="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs rounded-lg transition">Default</button>
+                        <button onclick="setPreset(5, 0, 0, 4)" class="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs rounded-lg transition">90° Right</button>
+                        <button onclick="setPreset(3, 4, -5, 2)" class="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs rounded-lg transition">Opposing</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Real-time Mathematical Calculation Readout -->
+            <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between gap-4">
+                <div class="flex flex-col gap-3">
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                        <i class="fa-solid fa-calculator text-emerald-400"></i> Mathematical Readout & Formula
+                    </h2>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <!-- Card Vector A -->
+                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                            <span class="text-[10px] font-mono text-cyan-400 font-bold block mb-1">VECTOR A</span>
+                            <div id="readout-A-comp" class="text-xs font-mono font-bold text-slate-200">A = (4.0, 3.0)</div>
+                            <div id="readout-A-mag" class="text-[11px] font-mono text-slate-400 mt-1">|A| = 5.00</div>
+                            <div id="readout-A-ang" class="text-[11px] font-mono text-slate-400">θ = 36.9°</div>
+                        </div>
+
+                        <!-- Card Vector B -->
+                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                            <span class="text-[10px] font-mono text-purple-400 font-bold block mb-1">VECTOR B</span>
+                            <div id="readout-B-comp" class="text-xs font-mono font-bold text-slate-200">B = (2.0, -2.0)</div>
+                            <div id="readout-B-mag" class="text-[11px] font-mono text-slate-400 mt-1">|B| = 2.83</div>
+                            <div id="readout-B-ang" class="text-[11px] font-mono text-slate-400">θ = -45.0°</div>
+                        </div>
+
+                        <!-- Card Vector C (Resultant) -->
+                        <div class="bg-slate-950 p-3 rounded-xl border border-emerald-900/60 bg-emerald-950/20">
+                            <span class="text-[10px] font-mono text-emerald-400 font-bold block mb-1">RESULTANT C (A + B)</span>
+                            <div id="readout-C-comp" class="text-xs font-mono font-bold text-emerald-300">C = (6.0, 1.0)</div>
+                            <div id="readout-C-mag" class="text-[11px] font-mono text-slate-300 mt-1">|C| = 6.08</div>
+                            <div id="readout-C-ang" class="text-[11px] font-mono text-slate-300">θ = 9.5°</div>
+                        </div>
+                    </div>
+
+                    <!-- LaTeX Formula Display Box -->
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 flex flex-col gap-2 overflow-x-auto">
+                        <span class="text-[10px] font-mono text-slate-500 uppercase">Analytical Vector Addition Formula</span>
+                        <div id="math-formula-box" class="text-cyan-300">
+                            $$\vec{C} = \vec{A} + \vec{B} = (A_x + B_x)\hat{i} + (A_y + B_y)\hat{j}$$
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-[11px] text-slate-500 border-t border-slate-800 pt-2 flex items-center justify-between">
+                    <span>Head-to-Tail (Triangle Method)</span>
+                    <span class="font-mono text-slate-400">C_x = A_x + B_x | C_y = A_y + B_y</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Global Vector State (in Cartesian math units)
+        let vecA = { x: 4.0, y: 3.0 };
+        let vecB = { x: 2.0, y: -2.0 };
+
+        // Canvas & Interaction Variables
+        let canvas, ctx;
+        let scale = 35; // Pixels per math unit
+        let origin = { x: 0, y: 0 };
+        let activeHandle = null; // 'A' | 'B' | null
+
+        // Animation State
+        // Animation sequence:
+        // phase 0: Idle/Static
+        // phase 1: Phantom B sliding from (0,0) to tip of A (progress t: 0 -> 1)
+        // phase 2: Resultant C growing from (0,0) to tip of phantom B (progress t: 0 -> 1)
+        let isAnimating = false;
+        let animPhase = 0; // 0: None, 1: Sliding B phantom, 2: Drawing C
+        let animProgress = 1.0; // 0.0 to 1.0
+        let animStartTime = 0;
+
+        const DURATION_PHASE1 = 700; // ms for phantom B slide
+        const DURATION_PHASE2 = 600; // ms for resultant C draw
+
+        /* =========================================================================
+           INITIALIZATION & EVENT LISTENERS
+           ========================================================================= */
+
+        function initCanvas() {
+            canvas = document.getElementById('vectorCanvas');
+            ctx = canvas.getContext('2d');
+
+            resizeCanvas();
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                render();
+            });
+
+            // Touch & Mouse Listeners for Handle Dragging
+            attachDragListeners(canvas);
+
+            // Initial calculation readout & animation
+            updateReadout();
+            triggerAdditionAnimation();
+        }
+
+        function resizeCanvas() {
+            let rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+            // Center origin on canvas with grid scale adapted to screen size
+            origin.x = Math.floor(canvas.width / 3);
+            origin.y = Math.floor(canvas.height / 2 + 30);
+
+            // Dynamic scaling based on canvas width
+            scale = Math.max(25, Math.min(45, canvas.width / 18));
+        }
+
+        function mathToScreen(xMath, yMath) {
+            return {
+                x: origin.x + xMath * scale,
+                y: origin.y - yMath * scale // Invert Y for screen coordinates
+            };
+        }
+
+        function screenToMath(xScreen, yScreen) {
+            return {
+                x: Math.round(((xScreen - origin.x) / scale) * 2) / 2, // Snap to 0.5 grid steps
+                y: Math.round(((origin.y - yScreen) / scale) * 2) / 2
+            };
+        }
+
+        /* =========================================================================
+           DRAG & TOUCH INTERACTION
+           ========================================================================= */
+
+        function attachDragListeners(canvas) {
+            function getEventPos(e) {
+                let rect = canvas.getBoundingClientRect();
+                let clientX = e.clientX;
+                let clientY = e.clientY;
+                if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                }
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            }
+
+            function onStart(pos) {
+                let handleRadius = 24; // Generous touch target for mobile
+
+                let tipA = mathToScreen(vecA.x, vecA.y);
+                let tipB = mathToScreen(vecB.x, vecB.y);
+
+                let distA = Math.hypot(pos.x - tipA.x, pos.y - tipA.y);
+                let distB = Math.hypot(pos.x - tipB.x, pos.y - tipB.y);
+
+                if (distA < handleRadius) {
+                    activeHandle = 'A';
+                } else if (distB < handleRadius) {
+                    activeHandle = 'B';
+                } else {
+                    activeHandle = null;
+                }
+            }
+
+            function onMove(pos) {
+                if (!activeHandle) return;
+
+                let mathPos = screenToMath(pos.x, pos.y);
+                // Limit range to [-12, 12]
+                mathPos.x = Math.max(-10, Math.min(10, mathPos.x));
+                mathPos.y = Math.max(-10, Math.min(10, mathPos.y));
+
+                if (activeHandle === 'A') {
+                    vecA.x = mathPos.x;
+                    vecA.y = mathPos.y;
+                } else if (activeHandle === 'B') {
+                    vecB.x = mathPos.x;
+                    vecB.y = mathPos.y;
+                }
+
+                syncInputsFromVectors();
+                updateReadout();
+                render();
+            }
+
+            function onEnd() {
+                if (activeHandle) {
+                    activeHandle = null;
+                    // Trigger smooth head-to-tail animation on drag release
+                    triggerAdditionAnimation();
+                }
+            }
+
+            // Mouse
+            canvas.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                onStart(getEventPos(e));
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (activeHandle) onMove(getEventPos(e));
+            });
+            window.addEventListener('mouseup', onEnd);
+
+            // Touch (Mobile First)
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                onStart(getEventPos(e));
+            }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                onMove(getEventPos(e));
+            }, { passive: false });
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                onEnd();
+            });
+        }
+
+        /* =========================================================================
+           INPUT SYNCHRONIZATION & READOUT
+           ========================================================================= */
+
+        function syncInputsFromVectors() {
+            document.getElementById('input-Ax').value = vecA.x;
+            document.getElementById('input-Ay').value = vecA.y;
+            document.getElementById('input-Bx').value = vecB.x;
+            document.getElementById('input-By').value = vecB.y;
+        }
+
+        function onManualInputChange() {
+            vecA.x = parseFloat(document.getElementById('input-Ax').value) || 0;
+            vecA.y = parseFloat(document.getElementById('input-Ay').value) || 0;
+            vecB.x = parseFloat(document.getElementById('input-Bx').value) || 0;
+            vecB.y = parseFloat(document.getElementById('input-By').value) || 0;
+
+            updateReadout();
+            triggerAdditionAnimation();
+        }
+
+        function setPreset(ax, ay, bx, by) {
+            vecA.x = ax; vecA.y = ay;
+            vecB.x = bx; vecB.y = by;
+            syncInputsFromVectors();
+            updateReadout();
+            triggerAdditionAnimation();
+        }
+
+        function resetVectors() {
+            setPreset(4, 3, 2, -2);
+        }
+
+        function updateReadout() {
+            let magA = Math.hypot(vecA.x, vecA.y);
+            let magB = Math.hypot(vecB.x, vecB.y);
+
+            let vecC = { x: vecA.x + vecB.x, y: vecA.y + vecB.y };
+            let magC = Math.hypot(vecC.x, vecC.y);
+
+            let angA = (Math.atan2(vecA.y, vecA.x) * 180 / Math.PI).toFixed(1);
+            let angB = (Math.atan2(vecB.y, vecB.x) * 180 / Math.PI).toFixed(1);
+            let angC = (Math.atan2(vecC.y, vecC.x) * 180 / Math.PI).toFixed(1);
+
+            document.getElementById('label-mag-A').innerText = `|A| = ${magA.toFixed(2)}`;
+            document.getElementById('label-mag-B').innerText = `|B| = ${magB.toFixed(2)}`;
+
+            document.getElementById('readout-A-comp').innerText = `A = (${vecA.x.toFixed(1)}, ${vecA.y.toFixed(1)})`;
+            document.getElementById('readout-A-mag').innerText = `|A| = ${magA.toFixed(2)}`;
+            document.getElementById('readout-A-ang').innerText = `θ = ${angA}°`;
+
+            document.getElementById('readout-B-comp').innerText = `B = (${vecB.x.toFixed(1)}, ${vecB.y.toFixed(1)})`;
+            document.getElementById('readout-B-mag').innerText = `|B| = ${magB.toFixed(2)}`;
+            document.getElementById('readout-B-ang').innerText = `θ = ${angB}°`;
+
+            document.getElementById('readout-C-comp').innerText = `C = (${vecC.x.toFixed(1)}, ${vecC.y.toFixed(1)})`;
+            document.getElementById('readout-C-mag').innerText = `|C| = ${magC.toFixed(2)}`;
+            document.getElementById('readout-C-ang').innerText = `θ = ${angC}°`;
+
+            // Update MathJax Formula
+            let formulaBox = document.getElementById('math-formula-box');
+            if (formulaBox) {
+                formulaBox.innerHTML = `$$\\vec{C} = (${vecA.x.toFixed(1)} + ${vecB.x >= 0 ? vecB.x.toFixed(1) : '(' + vecB.x.toFixed(1) + ')'})\\hat{i} + (${vecA.y.toFixed(1)} + ${vecB.y >= 0 ? vecB.y.toFixed(1) : '(' + vecB.y.toFixed(1) + ')'})\\hat{j} = ${vecC.x.toFixed(1)}\\hat{i} + ${vecC.y.toFixed(1)}\\hat{j}$$`;
+                if (window.MathJax && window.MathJax.typesetPromise) {
+                    MathJax.typesetPromise([formulaBox]);
+                }
+            }
+        }
+
+        /* =========================================================================
+           ANIMATION CONTROLLER (Head-To-Tail Slide & Draw)
+           ========================================================================= */
+
+        function triggerAdditionAnimation() {
+            isAnimating = true;
+            animPhase = 1;
+            animProgress = 0;
+            animStartTime = performance.now();
+            showToast("Sliding Vector B to tip of A...");
+            requestAnimationFrame(animationLoop);
+        }
+
+        function showToast(msg) {
+            let toast = document.getElementById('status-toast');
+            toast.innerText = msg;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => toast.classList.add('opacity-0'), 2500);
+        }
+
+        function animationLoop(now) {
+            if (!isAnimating) return;
+
+            let elapsed = now - animStartTime;
+
+            if (animPhase === 1) {
+                animProgress = Math.min(1.0, elapsed / DURATION_PHASE1);
+                // Ease out cubic
+                let eased = 1 - Math.pow(1 - animProgress, 3);
+                
+                if (animProgress >= 1.0) {
+                    animPhase = 2;
+                    animProgress = 0;
+                    animStartTime = now;
+                    showToast("Drawing Resultant Vector C...");
+                }
+            } else if (animPhase === 2) {
+                animProgress = Math.min(1.0, elapsed / DURATION_PHASE2);
+                if (animProgress >= 1.0) {
+                    isAnimating = false;
+                    animPhase = 0; // Final state
+                }
+            }
+
+            render();
+
+            if (isAnimating) {
+                requestAnimationFrame(animationLoop);
+            }
+        }
+
+        /* =========================================================================
+           CANVAS RENDERING ENGINE
+           ========================================================================= */
+
+        function render() {
+            if (!ctx) return;
+
+            // Clear Background
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Grid Lines & Axes
+            drawGrid();
+
+            let screenO = origin;
+            let screenA = mathToScreen(vecA.x, vecA.y);
+            let screenB = mathToScreen(vecB.x, vecB.y);
+            let vecC = { x: vecA.x + vecB.x, y: vecA.y + vecB.y };
+            let screenC = mathToScreen(vecC.x, vecC.y);
+
+            // 2. Draw Base Vector A (Cyan)
+            drawVector(screenO, screenA, '#06b6d4', 3, 'A');
+
+            // 3. Draw Base Vector B (Purple)
+            drawVector(screenO, screenB, '#a855f7', 3, 'B');
+
+            // 4. Phantom Vector B Slide & Resultant C Rendering
+            if (isAnimating) {
+                if (animPhase === 1) {
+                    // Phantom B is sliding its base from (0,0) to tip of A
+                    let eased = 1 - Math.pow(1 - animProgress, 3);
+                    let phantomBaseMath = { x: vecA.x * eased, y: vecA.y * eased };
+                    let phantomTipMath = { x: phantomBaseMath.x + vecB.x, y: phantomBaseMath.y + vecB.y };
+
+                    let screenPBase = mathToScreen(phantomBaseMath.x, phantomBaseMath.y);
+                    let screenPTip = mathToScreen(phantomTipMath.x, phantomTipMath.y);
+
+                    // Draw ghost trajectory line
+                    ctx.beginPath();
+                    ctx.moveTo(screenO.x, screenO.y);
+                    ctx.lineTo(screenA.x, screenA.y);
+                    ctx.strokeStyle = 'rgba(6, 182, 212, 0.3)';
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Draw sliding phantom B
+                    drawVector(screenPBase, screenPTip, 'rgba(168, 85, 247, 0.85)', 3, "B'", true);
+                } else if (animPhase === 2) {
+                    // Phantom B is fully placed at tip of A
+                    drawVector(screenA, screenC, 'rgba(168, 85, 247, 0.9)', 3, "B'", true);
+
+                    // Progressively draw Resultant C from Origin to C
+                    let eased = 1 - Math.pow(1 - animProgress, 3);
+                    let partialC = { x: vecC.x * eased, y: vecC.y * eased };
+                    let screenPartialC = mathToScreen(partialC.x, partialC.y);
+
+                    drawVector(screenO, screenPartialC, '#10b981', 4, 'C');
+                }
+            } else {
+                // Static Final State: Show placed Phantom B' and Resultant C
+                drawVector(screenA, screenC, 'rgba(168, 85, 247, 0.85)', 3, "B'", true);
+                drawVector(screenO, screenC, '#10b981', 4, 'C = A + B');
+            }
+
+            // 5. Draw Interactive Drag Handles at Tip A and Tip B
+            drawHandle(screenA, '#06b6d4', activeHandle === 'A');
+            drawHandle(screenB, '#a855f7', activeHandle === 'B');
+        }
+
+        function drawGrid() {
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(51, 65, 85, 0.3)';
+
+            // Vertical Grid Lines
+            for (let x = origin.x % scale; x < canvas.width; x += scale) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            // Horizontal Grid Lines
+            for (let y = origin.y % scale; y < canvas.height; y += scale) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // X and Y Main Axes
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+            ctx.lineWidth = 2;
+
+            // X Axis
+            ctx.beginPath();
+            ctx.moveTo(0, origin.y);
+            ctx.lineTo(canvas.width, origin.y);
+            ctx.stroke();
+
+            // Y Axis
+            ctx.beginPath();
+            ctx.moveTo(origin.x, 0);
+            ctx.lineTo(origin.x, canvas.height);
+            ctx.stroke();
+
+            // Origin Point Circle
+            ctx.beginPath();
+            ctx.arc(origin.x, origin.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fill();
+        }
+
+        function drawVector(from, to, color, width = 3, label = '', isDashed = false) {
+            let dx = to.x - from.x;
+            let dy = to.y - from.y;
+            let len = Math.hypot(dx, dy);
+            if (len < 2) return;
+
+            let angle = Math.atan2(dy, dx);
+            let headLen = Math.min(14, len * 0.3);
+
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+
+            if (isDashed) {
+                ctx.setLineDash([5, 5]);
+            }
+
+            // Vector Line
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Arrow Head
+            ctx.beginPath();
+            ctx.moveTo(to.x, to.y);
+            ctx.lineTo(to.x - headLen * Math.cos(angle - Math.PI / 6), to.y - headLen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(to.x - headLen * Math.cos(angle + Math.PI / 6), to.y - headLen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+
+            // Vector Label
+            if (label) {
+                let midX = (from.x + to.x) / 2;
+                let midY = (from.y + to.y) / 2;
+                let offset = 14;
+
+                let perpAngle = angle - Math.PI / 2;
+                let labelX = midX + Math.cos(perpAngle) * offset;
+                let labelY = midY + Math.sin(perpAngle) * offset;
+
+                ctx.font = 'bold 12px monospace';
+                ctx.fillStyle = color;
+                ctx.fillText(label, labelX - 6, labelY + 4);
+            }
+
+            ctx.restore();
+        }
+
+        function drawHandle(pos, color, isActive) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, isActive ? 12 : 8, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = isActive ? 15 : 8;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, isActive ? 12 : 8, 0, Math.PI * 2);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 0;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        window.addEventListener('DOMContentLoaded', initCanvas);
+    </script>
+</body>
+</html>
