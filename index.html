@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math & Physics Visualisations</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        .glow-card {
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.15);
+        }
+        .glow-card:hover {
+            box-shadow: 0 0 40px rgba(6, 182, 212, 0.35);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between antialiased selection:bg-cyan-500 selection:text-slate-950">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 px-6 py-4">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-cyan-500/20">
+                    <i class="fa-solid fa-atom"></i>
+                </div>
+                <span class="text-xl font-bold tracking-wide">Math & Physics Lab</span>
+            </div>
+            <a href="https://github.com" target="_blank" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-2 rounded-lg transition flex items-center gap-2">
+                <i class="fa-brands fa-github text-sm"></i> GitHub Pages Demo
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Hero & Links -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-12 flex flex-col items-center justify-center text-center">
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-800 text-cyan-400 text-xs font-mono mb-6">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            Automated Deployment active via GitHub Actions
+        </div>
+
+        <h1 class="text-4xl sm:text-6xl font-black text-slate-100 tracking-tight max-w-3xl leading-tight mb-4">
+            Interactive <span class="bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-500 bg-clip-text text-transparent">Visualizations</span> & Algorithms
+        </h1>
+        <p class="text-slate-400 text-base sm:text-lg max-w-2xl mb-12">
+            Explore mathematical models, gesture recognition algorithms, and real-time physical simulations right in your browser.
+        </p>
+
+        <!-- Project Cards Grid -->
+        <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+            <!-- Card 1: Gesture Recognizer -->
+            <a href="gesture.html" class="group bg-slate-900 border border-slate-800 hover:border-cyan-500/50 rounded-2xl p-6 glow-card transition-all duration-300 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-cyan-950 border border-cyan-800 text-cyan-400 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <span class="text-xs font-mono px-2.5 py-1 rounded-md bg-slate-950 border border-slate-800 text-cyan-400">Interactive App</span>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-100 group-hover:text-cyan-400 transition-colors mb-2 flex items-center gap-2">
+                        Gesture & Shape Recognition Sandbox
+                        <i class="fa-solid fa-arrow-right text-sm opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-cyan-400"></i>
+                    </h2>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Point-cloud shape detection using $P and $P+ algorithms. Features live stroke drawing, threshold controls, template creation, and an interactive step-by-step pipeline explainer.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-mono">
+                    <span>Algorithm: $P / $P+</span>
+                    <span class="text-cyan-400 group-hover:underline">Launch Sandbox &rarr;</span>
+                </div>
+            </a>
+
+            <!-- Card 2: Placeholder for future visualisations -->
+            <div class="bg-slate-900/50 border border-slate-800/60 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 text-slate-600 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-flask"></i>
+                        </div>
+                        <span class="text-xs font-mono px-2.5 py-1 rounded-md bg-slate-950 border border-slate-800 text-slate-500">Coming Soon</span>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-400 mb-2">
+                        Physics & Math Simulations
+                    </h2>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        More interactive modules, numerical solvers, and vector field visualizers will be pushed automatically to this repository.
+                    </p>
+                </div>
+                <div class="pt-4 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-600 font-mono">
+                    <span>Automated Deployment</span>
+                    <span>Ready</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950 py-6 px-6 text-center text-xs text-slate-500">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p>GitHub Pages Continuous Deployment Setup</p>
+            <p class="font-mono">Built with HTML5 & Tailwind CSS</p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture & Shape Recognition Sandbox ($P / $P+ Engine)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            900: '#14532d',
+                        },
+                        rune: {
+                            cyan: '#06b6d4',
+                            purple: '#a855f7',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            touch-action: manipulation;
+        }
+        /* Canvas touch handling */
+        canvas {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* Neon glow effects */
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.35);
+        }
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.35);
+        }
+        .text-glow {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(71, 85, 105, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-slate-950">
+
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Back to Home">
+                    <i class="fa-solid fa-house text-sm"></i>
+                </a>
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-cyan-500/20">
+                    <i class="fa-solid fa-wand-magic-sparkles text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide flex items-center gap-2">
+                        Rune Recognizer <span class="text-xs font-mono font-normal px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-400">$P / $P+ Engine</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Point-cloud shape detection with direction sensitivity</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button id="tab-btn-sandbox" onclick="switchTab('sandbox')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-cyan-600 text-white shadow-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-gamepad"></i> Sandbox
+                </button>
+                <button id="tab-btn-explainer" onclick="switchTab('explainer')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+                    <i class="fa-solid fa-microscope text-purple-400"></i> Step-by-Step $P+$
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <div class="hidden sm:flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+                    <button id="mode-p-plus" onclick="setAlgorithmMode('PPLUS')" class="px-3 py-1.5 rounded-md font-medium transition-all bg-cyan-600 text-white shadow-sm">
+                        $P+ (Directional)
+                    </button>
+                    <button id="mode-p" onclick="setAlgorithmMode('P')" class="px-3 py-1.5 rounded-md font-medium transition-all text-slate-400 hover:text-slate-200">
+                        $P (Cloud)
+                    </button>
+                    <button id="mode-1" onclick="setAlgorithmMode('ONE')" class="px-3 py-1.5 rounded-md font-medium transition-all text-slate-400 hover:text-slate-200">
+                        $1 (Unistroke)
+                    </button>
+                </div>
+                <button onclick="resetDefaultTemplates()" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate-left text-slate-400"></i>
+                    Reset Presets
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Application Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4">
+
+        <!-- TAB 1: SANDBOX PLAYGROUND -->
+        <div id="view-sandbox" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- LEFT COLUMN: Template Manager -->
+            <section class="lg:col-span-4 flex flex-col gap-5">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                        <i class="fa-solid fa-pen-ruler text-cyan-400"></i> Create Template
+                    </h2>
+                    <span class="text-xs text-slate-500 font-mono" id="template-point-count">0 pts</span>
+                </div>
+
+                <div class="relative w-full aspect-square bg-slate-950 border border-slate-800 rounded-xl overflow-hidden group">
+                    <canvas id="templateCanvas" class="w-full h-full cursor-crosshair"></canvas>
+                    <div id="template-canvas-hint" class="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-600 text-xs flex-col gap-1">
+                        <i class="fa-solid fa-hand-pointer text-slate-700 text-base"></i>
+                        Draw a shape gesture here
+                    </div>
+                    <button onclick="clearTemplateCanvas()" class="absolute top-2 right-2 px-2 py-1 bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs rounded border border-slate-700 backdrop-blur transition">
+                        <i class="fa-solid fa-eraser"></i> Clear
+                    </button>
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="templateNameInput" placeholder="Template Name (e.g. Triangle)" 
+                           class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 transition placeholder:text-slate-600">
+                    <button onclick="saveCurrentTemplate()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-slate-950 font-bold text-sm rounded-xl transition shadow-lg shadow-cyan-500/20 flex items-center gap-1.5 whitespace-nowrap">
+                        <i class="fa-solid fa-plus"></i> Save
+                    </button>
+                </div>
+
+                <!-- Saved Templates List -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex-1 flex flex-col min-h-[250px]">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                            <i class="fa-solid fa-layer-group text-purple-400"></i> Active Templates (<span id="template-count">0</span>)
+                        </h2>
+                        <button onclick="removeAllTemplates()" class="text-xs text-rose-400 hover:text-rose-300 transition">Clear All</button>
+                    </div>
+
+                    <div id="templatesList" class="flex-1 overflow-y-auto pr-1 space-y-2 max-h-[300px]">
+                        <!-- Template cards injected dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT COLUMN: Sandbox Testing Ground & Results -->
+            <section class="lg:col-span-8 flex flex-col gap-5">
+                <!-- Sandbox Canvas Card -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3 relative">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-300">Spell Sandbox Area</h2>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-xs">
+                            <label class="flex items-center gap-1.5 text-slate-400 cursor-pointer select-none">
+                                <input type="checkbox" id="showPointsToggle" onchange="renderTestCanvas()" class="rounded bg-slate-950 border-slate-800 text-cyan-500 focus:ring-0">
+                                Show Resampled Points
+                            </label>
+                            <button onclick="clearTestCanvas()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">
+                                <i class="fa-solid fa-trash-can"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Test Canvas Container -->
+                    <div class="relative w-full aspect-[4/3] sm:aspect-[16/10] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden glow-cyan transition-all">
+                        <!-- Background Grid Pattern -->
+                        <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
+
+                        <!-- Canvas -->
+                        <canvas id="testCanvas" class="w-full h-full relative z-10 cursor-crosshair"></canvas>
+
+                        <!-- User Canvas Overlay Prompt -->
+                        <div id="test-canvas-prompt" class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center gap-2 text-slate-500 z-0">
+                            <i class="fa-solid fa-wand-magic-sparkles text-3xl text-cyan-500/40 animate-bounce"></i>
+                            <p class="text-sm">Draw any gesture shape or rune here</p>
+                            <span class="text-xs text-slate-600">Supports mouse & mobile touch continuous strokes</span>
+                        </div>
+
+                        <!-- Real-Time Result Toast Badge on Canvas -->
+                        <div id="canvas-result-overlay" class="absolute top-4 left-4 z-20 pointer-events-none opacity-0 transition-all duration-300 transform -translate-y-2">
+                            <div class="bg-slate-900/90 border border-cyan-500/50 backdrop-blur-md px-4 py-2 rounded-xl shadow-2xl flex items-center gap-3">
+                                <div id="result-overlay-icon" class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                                <div>
+                                    <div id="result-overlay-name" class="text-sm font-bold text-slate-100">Circle</div>
+                                    <div id="result-overlay-score" class="text-xs text-cyan-400 font-mono">98.5% match</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recognition Stats & Comparison Board -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+                    <!-- Match Card -->
+                    <div class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between gap-4">
+                        <div>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Top Match Classification</span>
+                            <div class="mt-2 flex items-center justify-between">
+                                <h3 id="bestMatchTitle" class="text-2xl font-black text-slate-100 tracking-tight">No Gesture Drawn</h3>
+                                <span id="bestMatchScore" class="text-xl font-mono font-bold text-slate-500">0%</span>
+                            </div>
+                        </div>
+
+                        <!-- Match Meter Bar -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs font-mono text-slate-400">
+                                <span>Confidence</span>
+                                <span id="matchScoreText">0.0 / 100</span>
+                            </div>
+                            <div class="w-full h-3 bg-slate-950 border border-slate-800 rounded-full overflow-hidden p-0.5">
+                                <div id="confidenceBar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-500 w-0"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800 text-xs font-mono text-slate-400">
+                            <div>
+                                <span class="text-slate-600 block">Execution Time</span>
+                                <span id="calcTimeText" class="text-slate-200 font-semibold">0.0 ms</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-600 block">Current Algorithm</span>
+                                <span id="algorithmLabel" class="text-cyan-400 font-semibold">$P+ (Point-Cloud)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ranked Leaderboard -->
+                    <div class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3 flex items-center justify-between">
+                            <span>Template Match Leaderboard</span>
+                            <span class="text-[10px] font-mono text-slate-600">Dist. Score Matrix</span>
+                        </span>
+
+                        <div id="leaderboardList" class="flex-1 overflow-y-auto space-y-2 max-h-[160px] pr-1">
+                            <div class="text-xs text-slate-600 italic text-center py-6">Draw a gesture above to see ranking scores</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Config Bar -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-4 text-xs">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400 font-medium">Sample Points (N):</span>
+                            <select id="samplePointsSelect" onchange="updateSettings()" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 font-mono text-xs focus:outline-none focus:border-cyan-500">
+                                <option value="16">16 Points</option>
+                                <option value="32" selected>32 Points (Recommended)</option>
+                                <option value="64">64 Points</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400 font-medium">Acceptance Threshold:</span>
+                            <input type="range" id="thresholdRange" min="50" max="95" value="65" oninput="updateThresholdLabel()" class="w-24 accent-cyan-500">
+                            <span id="thresholdVal" class="font-mono text-slate-300">65%</span>
+                        </div>
+                    </div>
+
+                    <div class="text-slate-500 text-[11px]">
+                        Algorithm handles translation, scale, rotation & touch point variance
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- TAB 2: STEP-BY-STEP P+ PIPELINE EXPLAINER -->
+        <div id="view-explainer" class="hidden flex flex-col gap-6">
+            <!-- Header Controls & Stepper Navigation -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-cyan-400"></i> $P+ Point-Cloud Transformation Pipeline
+                        </h2>
+                        <p class="text-xs text-slate-400">Step through how a drawn gesture is normalized and paired against a template</p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="stepPrev()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition border border-slate-700 flex items-center gap-1">
+                            <i class="fa-solid fa-chevron-left"></i> Prev
+                        </button>
+                        <button onclick="stepNext()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs rounded-lg transition shadow-lg shadow-cyan-500/20 flex items-center gap-1">
+                            Next <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pipeline Stepper Buttons -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                    <button onclick="setPipelineStep(1)" id="step-btn-1" class="p-2.5 rounded-xl border border-cyan-500 bg-cyan-500/10 text-cyan-300 font-medium text-left transition flex flex-col gap-1">
+                        <span class="text-[10px] uppercase font-mono text-cyan-400">Step 1</span>
+                        <span class="font-bold truncate">1. Raw Input</span>
+                    </button>
+                    <button onclick="setPipelineStep(2)" id="step-btn-2" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-medium text-left transition flex flex-col gap-1 hover:border-slate-700">
+                        <span class="text-[10px] uppercase font-mono text-slate-500">Step 2</span>
+                        <span class="font-bold truncate">2. Arc Resampling</span>
+                    </button>
+                    <button onclick="setPipelineStep(3)" id="step-btn-3" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-medium text-left transition flex flex-col gap-1 hover:border-slate-700">
+                        <span class="text-[10px] uppercase font-mono text-slate-500">Step 3</span>
+                        <span class="font-bold truncate">3. Trajectory Angles</span>
+                    </button>
+                    <button onclick="setPipelineStep(4)" id="step-btn-4" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-medium text-left transition flex flex-col gap-1 hover:border-slate-700">
+                        <span class="text-[10px] uppercase font-mono text-slate-500">Step 4</span>
+                        <span class="font-bold truncate">4. Scale & Center</span>
+                    </button>
+                    <button onclick="setPipelineStep(5)" id="step-btn-5" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-medium text-left transition flex flex-col gap-1 hover:border-slate-700 col-span-2 sm:col-span-1">
+                        <span class="text-[10px] uppercase font-mono text-slate-500">Step 5</span>
+                        <span class="font-bold truncate">5. Point Cloud Pairing</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pipeline Visual Display Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Visualizer Canvas Card -->
+                <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                            <i class="fa-solid fa-eye text-cyan-400"></i> Visual Pipeline Inspection
+                        </span>
+                        <span id="step-badge" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-400">Step 1 / 5</span>
+                    </div>
+
+                    <div class="relative w-full aspect-[4/3] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+                        <canvas id="pipelineCanvas" class="w-full h-full cursor-crosshair"></canvas>
+                        
+                        <!-- Canvas Overlay Legend -->
+                        <div id="pipeline-canvas-legend" class="absolute bottom-3 left-3 bg-slate-900/90 border border-slate-800 backdrop-blur-md p-2 rounded-lg text-[11px] font-mono flex items-center gap-3 text-slate-300">
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> User Stroke</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Resampled Points</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs text-slate-400">
+                        <span>Draw a gesture on canvas above to inspect live transformations</span>
+                        <button onclick="clearPipelineCanvas()" class="text-xs text-slate-500 hover:text-slate-300 transition">Reset Demo Stroke</button>
+                    </div>
+                </div>
+
+                <!-- Stage Explanation & Formula Breakdown -->
+                <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between gap-4">
+                    <div class="flex flex-col gap-3">
+                        <div id="stage-title-tag" class="text-xs font-mono text-cyan-400 uppercase tracking-widest font-bold">Stage 1: Raw Touch Input</div>
+                        <h3 id="stage-headline" class="text-xl font-bold text-slate-100">Capturing Raw Coordinates</h3>
+                        <p id="stage-description" class="text-xs text-slate-300 leading-relaxed">
+                            When a player draws a stroke on mobile or desktop, the screen registers input events at irregular hardware intervals. This produces a raw sequence of $(x, y)$ coordinates with varying point density based on gesture speed.
+                        </p>
+
+                        <!-- Math & Algorithmic Detail Card -->
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex flex-col gap-2 mt-2">
+                            <span class="text-[10px] font-mono uppercase text-purple-400 font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-square-root-variable"></i> Mathematical Formula / Operation
+                            </span>
+                            <div id="stage-formula" class="font-mono text-xs text-slate-200 bg-slate-900 p-2 rounded border border-slate-800/80 overflow-x-auto">
+                                Points = [(x₀, y₀), (x₁, y₁), ..., (xₘ, yₘ)]
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Metrics Matrix -->
+                    <div class="border-t border-slate-800 pt-3 grid grid-cols-2 gap-3 text-xs font-mono">
+                        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                            <span class="text-slate-500 text-[10px] block">POINT COUNT</span>
+                            <span id="metric-points" class="text-slate-100 font-bold text-sm">0 pts</span>
+                        </div>
+                        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                            <span class="text-slate-500 text-[10px] block">TOTAL PATH LENGTH</span>
+                            <span id="metric-length" class="text-slate-100 font-bold text-sm">0 px</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        /**
+         * Point Class representing 2D gesture coordinates with stroke ID and trajectory vector angle
+         */
+        class Point {
+            constructor(x, y, strokeId = 1) {
+                this.x = x;
+                this.y = y;
+                this.strokeId = strokeId;
+                this.angle = 0; // Local tangent trajectory angle (for $P+)
+            }
+        }
+
+        /**
+         * Template Structure
+         */
+        class GestureTemplate {
+            constructor(name, points) {
+                this.name = name;
+                this.rawPoints = points;
+                this.normalizedPoints = [];
+                this.updateNormalizedPoints();
+            }
+
+            updateNormalizedPoints() {
+                if (this.rawPoints && this.rawPoints.length > 0) {
+                    this.normalizedPoints = normalizeGesture(this.rawPoints, CONFIG.samplePoints);
+                }
+            }
+        }
+
+        // Global State & Config
+        const CONFIG = {
+            samplePoints: 32,
+            mode: 'PPLUS', // 'PPLUS', 'P', 'ONE'
+            threshold: 65,
+            squareSize: 250.0
+        };
+
+        let templates = [];
+        let templateStroke = [];
+        let testStroke = [];
+        let isDrawingTemplate = false;
+        let isDrawingTest = false;
+
+        let templateCanvas, templateCtx;
+        let testCanvas, testCtx;
+
+        // Pipeline Explainer State
+        let currentTab = 'sandbox'; // 'sandbox' | 'explainer'
+        let currentPipelineStep = 1;
+        let pipelineStroke = [];
+        let isDrawingPipeline = false;
+        let pipelineCanvas, pipelineCtx;
+
+        /* =========================================================================
+           CANVAS & UI SETUP
+           ========================================================================= */
+
+        function resizeCanvas(canvas) {
+            if (!canvas) return;
+            let rect = canvas.getBoundingClientRect();
+            if (canvas.width !== rect.width || canvas.height !== rect.height) {
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+        }
+
+        function initCanvases() {
+            templateCanvas = document.getElementById('templateCanvas');
+            templateCtx = templateCanvas.getContext('2d');
+            resizeCanvas(templateCanvas);
+
+            testCanvas = document.getElementById('testCanvas');
+            testCtx = testCanvas.getContext('2d');
+            resizeCanvas(testCanvas);
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                resizeCanvas(templateCanvas);
+                resizeCanvas(testCanvas);
+                resizeCanvas(pipelineCanvas);
+                renderTemplateCanvas();
+                renderTestCanvas();
+                renderPipelineCanvas();
+            });
+
+            // Template canvas drawing listeners
+            attachDrawingListeners(templateCanvas,
+                (p) => {
+                    isDrawingTemplate = true;
+                    templateStroke = [p];
+                    document.getElementById('template-canvas-hint').style.display = 'none';
+                    renderTemplateCanvas();
+                },
+                (p) => {
+                    if (!isDrawingTemplate) return;
+                    templateStroke.push(p);
+                    renderTemplateCanvas();
+                },
+                () => {
+                    isDrawingTemplate = false;
+                    document.getElementById('template-point-count').innerText = `${templateStroke.length} pts`;
+                    renderTemplateCanvas();
+                }
+            );
+
+            // Test canvas drawing listeners
+            attachDrawingListeners(testCanvas,
+                (p) => {
+                    isDrawingTest = true;
+                    testStroke = [p];
+                    document.getElementById('test-canvas-prompt').style.display = 'none';
+                    document.getElementById('canvas-result-overlay').classList.add('opacity-0');
+                    renderTestCanvas();
+                },
+                (p) => {
+                    if (!isDrawingTest) return;
+                    testStroke.push(p);
+                    renderTestCanvas();
+                },
+                () => {
+                    isDrawingTest = false;
+                    renderTestCanvas();
+                    runRecognition();
+                }
+            );
+        }
+
+        function attachDrawingListeners(canvas, onStart, onMove, onEnd) {
+            function getPos(e) {
+                let rect = canvas.getBoundingClientRect();
+                let clientX = e.clientX;
+                let clientY = e.clientY;
+                if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                }
+                return new Point(clientX - rect.left, clientY - rect.top);
+            }
+
+            // Mouse
+            canvas.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                onStart(getPos(e));
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (e.target === canvas || e.buttons === 1) {
+                    onMove(getPos(e));
+                }
+            });
+            window.addEventListener('mouseup', () => onEnd());
+
+            // Touch
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                onStart(getPos(e));
+            }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                onMove(getPos(e));
+            }, { passive: false });
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                onEnd();
+            });
+        }
+
+        /* =========================================================================
+           GEOMETRY & NORMALIZATION MATHEMATICS ($P / $P+)
+           ========================================================================= */
+
+        function distance(p1, p2) {
+            let dx = p2.x - p1.x;
+            let dy = p2.y - p1.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function pathLength(points) {
+            let len = 0;
+            for (let i = 1; i < points.length; i++) {
+                if (points[i].strokeId === points[i - 1].strokeId) {
+                    len += distance(points[i - 1], points[i]);
+                }
+            }
+            return len;
+        }
+
+        function resample(points, n) {
+            if (!points || points.length === 0) return [];
+            if (points.length === 1) return [new Point(points[0].x, points[0].y, points[0].strokeId)];
+
+            let I = pathLength(points) / (n - 1);
+            if (I === 0) {
+                let res = [];
+                for (let i = 0; i < n; i++) res.push(new Point(points[0].x, points[0].y, points[0].strokeId));
+                return res;
+            }
+
+            let D = 0;
+            let newPoints = [new Point(points[0].x, points[0].y, points[0].strokeId)];
+            let pts = points.slice();
+
+            for (let i = 1; i < pts.length; i++) {
+                if (pts[i].strokeId === pts[i - 1].strokeId) {
+                    let d = distance(pts[i - 1], pts[i]);
+                    if ((D + d) >= I) {
+                        let qx = pts[i - 1].x + ((I - D) / d) * (pts[i].x - pts[i - 1].x);
+                        let qy = pts[i - 1].y + ((I - D) / d) * (pts[i].y - pts[i - 1].y);
+                        let q = new Point(qx, qy, pts[i].strokeId);
+                        newPoints.push(q);
+                        pts.splice(i, 0, q); // Insert interpolated point
+                        D = 0;
+                    } else {
+                        D += d;
+                    }
+                }
+            }
+
+            while (newPoints.length < n) {
+                let last = newPoints[newPoints.length - 1];
+                newPoints.push(new Point(last.x, last.y, last.strokeId));
+            }
+            return newPoints.slice(0, n);
+        }
+
+        function computeTrajectoryAngles(points) {
+            let n = points.length;
+            for (let i = 0; i < n; i++) {
+                let prev = points[Math.max(0, i - 1)];
+                let next = points[Math.min(n - 1, i + 1)];
+                points[i].angle = Math.atan2(next.y - prev.y, next.x - prev.x);
+            }
+        }
+
+        function scaleToSquare(points, squareSize) {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (let p of points) {
+                minX = Math.min(minX, p.x);
+                maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y);
+                maxY = Math.max(maxY, p.y);
+            }
+            let width = maxX - minX;
+            let height = maxY - minY;
+            let scale = Math.max(width, height);
+            if (scale === 0) scale = 1;
+
+            let newPoints = [];
+            for (let p of points) {
+                let qx = ((p.x - minX) / scale) * squareSize;
+                let qy = ((p.y - minY) / scale) * squareSize;
+                let newP = new Point(qx, qy, p.strokeId);
+                newP.angle = p.angle;
+                newPoints.push(newP);
+            }
+            return newPoints;
+        }
+
+        function centroid(points) {
+            let cx = 0, cy = 0;
+            for (let p of points) {
+                cx += p.x;
+                cy += p.y;
+            }
+            return { x: cx / points.length, y: cy / points.length };
+        }
+
+        function translateToOrigin(points) {
+            let c = centroid(points);
+            let newPoints = [];
+            for (let p of points) {
+                let newP = new Point(p.x - c.x, p.y - c.y, p.strokeId);
+                newP.angle = p.angle;
+                newPoints.push(newP);
+            }
+            return newPoints;
+        }
+
+        function normalizeGesture(points, n) {
+            let resampled = resample(points, n);
+            computeTrajectoryAngles(resampled);
+            let scaled = scaleToSquare(resampled, CONFIG.squareSize);
+            let translated = translateToOrigin(scaled);
+            return translated;
+        }
+
+        /* =========================================================================
+           RECOGNITION ENGINE ($P, $P+, $1)
+           ========================================================================= */
+
+        function greedyCloudDistance(pts1, pts2, startIdx, mode) {
+            let n = pts1.length;
+            let matched = new Array(n).fill(false);
+            let totalDist = 0;
+
+            let i = startIdx;
+            let weightAngle = (mode === 'PPLUS') ? 25.0 : 0.0; // Direction penalty for P+
+
+            for (let cnt = 0; cnt < n; cnt++) {
+                let index = -1;
+                let minD = Infinity;
+
+                for (let j = 0; j < n; j++) {
+                    if (!matched[j]) {
+                        let d = distance(pts1[i], pts2[j]);
+                        if (mode === 'PPLUS') {
+                            let dAngle = Math.abs(pts1[i].angle - pts2[j].angle);
+                            if (dAngle > Math.PI) dAngle = 2 * Math.PI - dAngle;
+                            d += (dAngle / Math.PI) * weightAngle;
+                        }
+                        if (d < minD) {
+                            minD = d;
+                            index = j;
+                        }
+                    }
+                }
+                matched[index] = true;
+                totalDist += minD;
+                i = (i + 1) % n;
+            }
+            return totalDist / n; // Normalize average point distance
+        }
+
+        function cloudDistance(pts1, pts2, mode) {
+            let n = pts1.length;
+            let step = Math.floor(Math.pow(n, 0.5));
+            let minD = Infinity;
+
+            for (let i = 0; i < n; i += step) {
+                let d1 = greedyCloudDistance(pts1, pts2, i, mode);
+                let d2 = greedyCloudDistance(pts2, pts1, i, mode);
+                minD = Math.min(minD, Math.min(d1, d2));
+            }
+            return minD;
+        }
+
+        function runRecognition() {
+            if (testStroke.length < 5 || templates.length === 0) {
+                document.getElementById('bestMatchTitle').innerText = "No Gesture Drawn";
+                document.getElementById('bestMatchScore').innerText = "0%";
+                document.getElementById('confidenceBar').style.width = "0%";
+                document.getElementById('matchScoreText').innerText = "0.0 / 100";
+                document.getElementById('leaderboardList').innerHTML = `<div class="text-xs text-slate-600 italic text-center py-6">Draw a gesture above to see ranking scores</div>`;
+                return;
+            }
+
+            let t0 = performance.now();
+            let candidateNorm = normalizeGesture(testStroke, CONFIG.samplePoints);
+
+            let results = [];
+            for (let tmpl of templates) {
+                let dist = cloudDistance(candidateNorm, tmpl.normalizedPoints, CONFIG.mode);
+                // Calibrated score conversion against average distance
+                let maxDist = 85.0; 
+                let score = Math.max(0, Math.min(100, (1 - dist / maxDist) * 100));
+                results.push({ name: tmpl.name, dist: dist, score: score });
+            }
+
+            results.sort((a, b) => b.score - a.score);
+            let t1 = performance.now();
+            let duration = (t1 - t0).toFixed(1);
+
+            let best = results[0];
+            let isAccepted = best.score >= CONFIG.threshold;
+
+            // UI Update
+            document.getElementById('calcTimeText').innerText = `${duration} ms`;
+            document.getElementById('bestMatchTitle').innerText = best.name;
+            document.getElementById('bestMatchScore').innerText = `${best.score.toFixed(1)}%`;
+            document.getElementById('matchScoreText').innerText = `${best.score.toFixed(1)} / 100`;
+
+            let confidenceBar = document.getElementById('confidenceBar');
+            confidenceBar.style.width = `${best.score}%`;
+            confidenceBar.className = isAccepted 
+                ? "h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full transition-all duration-500" 
+                : "h-full bg-gradient-to-r from-amber-500 to-rose-500 rounded-full transition-all duration-500";
+
+            // Overlay Toast Badge
+            let overlay = document.getElementById('canvas-result-overlay');
+            let overlayName = document.getElementById('result-overlay-name');
+            let overlayScore = document.getElementById('result-overlay-score');
+            let overlayIcon = document.getElementById('result-overlay-icon');
+
+            overlayName.innerText = isAccepted ? best.name : `Unrecognized (${best.name}?)`;
+            overlayScore.innerText = `${best.score.toFixed(1)}% match`;
+            overlayIcon.innerHTML = isAccepted ? `<i class="fa-solid fa-check"></i>` : `<i class="fa-solid fa-question"></i>`;
+            overlayIcon.className = isAccepted 
+                ? "w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold"
+                : "w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold";
+            overlay.classList.remove('opacity-0');
+
+            // Render Leaderboard
+            renderLeaderboard(results);
+        }
+
+        function renderLeaderboard(results) {
+            let container = document.getElementById('leaderboardList');
+            container.innerHTML = '';
+
+            results.forEach((r, idx) => {
+                let row = document.createElement('div');
+                row.className = "flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800 text-xs";
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="font-mono text-[10px] w-4 text-slate-500">#${idx + 1}</span>
+                        <span class="font-semibold text-slate-200">${r.name}</span>
+                    </div>
+                    <div class="flex items-center gap-3 font-mono">
+                        <div class="w-20 bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                            <div class="h-full bg-cyan-500 rounded-full" style="width: ${r.score}%"></div>
+                        </div>
+                        <span class="w-12 text-right font-bold ${idx === 0 ? 'text-cyan-400' : 'text-slate-400'}">${r.score.toFixed(1)}%</span>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        /* =========================================================================
+           DRAWING & RENDERING UTILITIES
+           ========================================================================= */
+
+        function drawStroke(ctx, points, color = '#38bdf8', width = 3, isClosed = false) {
+            if (!points || points.length === 0) return;
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            for (let i = 0; i < points.length; i++) {
+                if (i === 0 || points[i].strokeId !== points[i - 1].strokeId) {
+                    ctx.moveTo(points[i].x, points[i].y);
+                } else {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+            }
+            if (isClosed) ctx.closePath();
+            ctx.stroke();
+        }
+
+        function renderTemplateCanvas() {
+            if (!templateCanvas) return;
+            let rect = templateCanvas.getBoundingClientRect();
+            templateCtx.clearRect(0, 0, rect.width, rect.height);
+            drawStroke(templateCtx, templateStroke, '#06b6d4', 4);
+        }
+
+        function renderTestCanvas() {
+            if (!testCanvas) return;
+            let rect = testCanvas.getBoundingClientRect();
+            testCtx.clearRect(0, 0, rect.width, rect.height);
+
+            drawStroke(testCtx, testStroke, '#38bdf8', 5);
+
+            let showPoints = document.getElementById('showPointsToggle').checked;
+            if (showPoints && testStroke.length > 5) {
+                let resampled = resample(testStroke, CONFIG.samplePoints);
+                for (let p of resampled) {
+                    testCtx.beginPath();
+                    testCtx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    testCtx.fillStyle = '#f43f5e';
+                    testCtx.fill();
+                    testCtx.strokeStyle = '#ffffff';
+                    testCtx.lineWidth = 1;
+                    testCtx.stroke();
+                }
+            }
+        }
+
+        function clearTemplateCanvas() {
+            templateStroke = [];
+            renderTemplateCanvas();
+            document.getElementById('template-canvas-hint').style.display = 'flex';
+            document.getElementById('template-point-count').innerText = "0 pts";
+        }
+
+        function clearTestCanvas() {
+            testStroke = [];
+            renderTestCanvas();
+            document.getElementById('test-canvas-prompt').style.display = 'flex';
+            document.getElementById('canvas-result-overlay').classList.add('opacity-0');
+            runRecognition();
+        }
+
+        function saveCurrentTemplate() {
+            let nameInput = document.getElementById('templateNameInput');
+            let name = nameInput.value.trim() || `Gesture ${templates.length + 1}`;
+
+            if (templateStroke.length < 5) {
+                alert("Please draw a gesture shape before saving!");
+                return;
+            }
+
+            let tmpl = new GestureTemplate(name, templateStroke);
+            templates.push(tmpl);
+            nameInput.value = '';
+            clearTemplateCanvas();
+            renderTemplatesList();
+            runRecognition();
+        }
+
+        function removeTemplate(index) {
+            templates.splice(index, 1);
+            renderTemplatesList();
+            runRecognition();
+        }
+
+        function removeAllTemplates() {
+            templates = [];
+            renderTemplatesList();
+            runRecognition();
+        }
+
+        function renderTemplatesList() {
+            let container = document.getElementById('templatesList');
+            document.getElementById('template-count').innerText = templates.length;
+            container.innerHTML = '';
+
+            templates.forEach((t, i) => {
+                let card = document.createElement('div');
+                card.className = "bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs";
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-800 text-cyan-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-shapes"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-100">${t.name}</div>
+                            <div class="text-[10px] font-mono text-slate-500">${t.rawPoints.length} raw pts</div>
+                        </div>
+                    </div>
+                    <button onclick="removeTemplate(${i})" class="text-slate-500 hover:text-rose-400 transition p-1.5">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function resetDefaultTemplates() {
+            templates = [];
+
+            // Preset Circle
+            let circlePts = [];
+            for (let i = 0; i <= 36; i++) {
+                let a = (i / 36) * Math.PI * 2;
+                circlePts.push(new Point(100 + Math.cos(a) * 60, 100 + Math.sin(a) * 60));
+            }
+            templates.push(new GestureTemplate("Circle", circlePts));
+
+            // Preset Triangle
+            let triPts = [
+                new Point(100, 40), new Point(160, 150), new Point(40, 150), new Point(100, 40)
+            ];
+            templates.push(new GestureTemplate("Triangle", triPts));
+
+            // Preset Square
+            let sqPts = [
+                new Point(50, 50), new Point(150, 50), new Point(150, 150), new Point(50, 150), new Point(50, 50)
+            ];
+            templates.push(new GestureTemplate("Square", sqPts));
+
+            // Preset Star
+            let starPts = [];
+            for (let i = 0; i < 5; i++) {
+                let a = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                starPts.push(new Point(100 + Math.cos(a) * 60, 100 + Math.sin(a) * 60));
+            }
+            starPts.push(starPts[0]);
+            templates.push(new GestureTemplate("Star", starPts));
+
+            renderTemplatesList();
+            runRecognition();
+        }
+
+        function updateSettings() {
+            CONFIG.samplePoints = parseInt(document.getElementById('samplePointsSelect').value);
+            for (let tmpl of templates) {
+                tmpl.updateNormalizedPoints();
+            }
+            runRecognition();
+        }
+
+        function updateThresholdLabel() {
+            let val = document.getElementById('thresholdRange').value;
+            CONFIG.threshold = parseInt(val);
+            document.getElementById('thresholdVal').innerText = `${val}%`;
+            runRecognition();
+        }
+
+        function setAlgorithmMode(mode) {
+            CONFIG.mode = mode;
+            let btnPPlus = document.getElementById('mode-p-plus');
+            let btnP = document.getElementById('mode-p');
+            let btn1 = document.getElementById('mode-1');
+            let lbl = document.getElementById('algorithmLabel');
+
+            btnPPlus.className = "px-3 py-1.5 rounded-md font-medium transition-all text-slate-400 hover:text-slate-200";
+            btnP.className = "px-3 py-1.5 rounded-md font-medium transition-all text-slate-400 hover:text-slate-200";
+            btn1.className = "px-3 py-1.5 rounded-md font-medium transition-all text-slate-400 hover:text-slate-200";
+
+            if (mode === 'PPLUS') {
+                btnPPlus.className = "px-3 py-1.5 rounded-md font-medium transition-all bg-cyan-600 text-white shadow-sm";
+                lbl.innerText = "$P+ (Point-Cloud)";
+            } else if (mode === 'P') {
+                btnP.className = "px-3 py-1.5 rounded-md font-medium transition-all bg-cyan-600 text-white shadow-sm";
+                lbl.innerText = "$P (Unordered Cloud)";
+            } else {
+                btn1.className = "px-3 py-1.5 rounded-md font-medium transition-all bg-cyan-600 text-white shadow-sm";
+                lbl.innerText = "$1 (Unistroke)";
+            }
+            runRecognition();
+        }
+
+        /* =========================================================================
+           TAB 2: PIPELINE EXPLAINER FUNCTIONS
+           ========================================================================= */
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+
+            let viewSandbox = document.getElementById('view-sandbox');
+            let viewExplainer = document.getElementById('view-explainer');
+
+            let btnSandbox = document.getElementById('tab-btn-sandbox');
+            let btnExplainer = document.getElementById('tab-btn-explainer');
+
+            if (tabName === 'sandbox') {
+                viewSandbox.classList.remove('hidden');
+                viewExplainer.classList.add('hidden');
+
+                btnSandbox.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-cyan-600 text-white shadow-sm flex items-center gap-1.5";
+                btnExplainer.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5";
+
+                setTimeout(() => {
+                    resizeCanvas(templateCanvas);
+                    resizeCanvas(testCanvas);
+                    renderTemplateCanvas();
+                    renderTestCanvas();
+                }, 50);
+            } else {
+                viewSandbox.classList.add('hidden');
+                viewExplainer.classList.remove('hidden');
+
+                btnExplainer.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-cyan-600 text-white shadow-sm flex items-center gap-1.5";
+                btnSandbox.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5";
+
+                if (pipelineStroke.length === 0 && testStroke.length > 0) {
+                    pipelineStroke = testStroke.slice();
+                } else if (pipelineStroke.length === 0) {
+                    pipelineStroke = [];
+                    for (let i = 0; i <= 30; i++) {
+                        let a = (i / 30) * Math.PI * 2;
+                        pipelineStroke.push(new Point(180 + Math.cos(a) * 70, 150 + Math.sin(a) * 70));
+                    }
+                }
+
+                setTimeout(() => {
+                    resizeCanvas(pipelineCanvas);
+                    renderPipelineCanvas();
+                }, 50);
+            }
+        }
+
+        function initPipelineCanvas() {
+            pipelineCanvas = document.getElementById('pipelineCanvas');
+            pipelineCtx = pipelineCanvas.getContext('2d');
+            resizeCanvas(pipelineCanvas);
+
+            attachDrawingListeners(pipelineCanvas,
+                (p) => {
+                    isDrawingPipeline = true;
+                    pipelineStroke = [p];
+                    renderPipelineCanvas();
+                },
+                (p) => {
+                    if (!isDrawingPipeline) return;
+                    pipelineStroke.push(p);
+                    renderPipelineCanvas();
+                },
+                () => {
+                    isDrawingPipeline = false;
+                    renderPipelineCanvas();
+                }
+            );
+        }
+
+        function setPipelineStep(step) {
+            currentPipelineStep = step;
+            for (let i = 1; i <= 5; i++) {
+                let btn = document.getElementById(`step-btn-${i}`);
+                if (i === step) {
+                    btn.className = "p-2.5 rounded-xl border border-cyan-500 bg-cyan-500/10 text-cyan-300 font-medium text-left transition flex flex-col gap-1 shadow-md shadow-cyan-500/10";
+                    btn.querySelector('span:first-child').className = "text-[10px] uppercase font-mono text-cyan-400";
+                } else {
+                    btn.className = "p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 font-medium text-left transition flex flex-col gap-1 hover:border-slate-700";
+                    btn.querySelector('span:first-child').className = "text-[10px] uppercase font-mono text-slate-500";
+                }
+            }
+            document.getElementById('step-badge').innerText = `Step ${step} / 5`;
+            updatePipelineExplanationText();
+            renderPipelineCanvas();
+        }
+
+        function stepNext() {
+            setPipelineStep(currentPipelineStep >= 5 ? 1 : currentPipelineStep + 1);
+        }
+
+        function stepPrev() {
+            setPipelineStep(currentPipelineStep <= 1 ? 5 : currentPipelineStep - 1);
+        }
+
+        function clearPipelineCanvas() {
+            pipelineStroke = [];
+            pipelineCtx.clearRect(0, 0, pipelineCanvas.width, pipelineCanvas.height);
+            document.getElementById('metric-points').innerText = "0 pts";
+            document.getElementById('metric-length').innerText = "0 px";
+        }
+
+        function updatePipelineExplanationText() {
+            let stageTag = document.getElementById('stage-title-tag');
+            let headline = document.getElementById('stage-headline');
+            let desc = document.getElementById('stage-description');
+            let formula = document.getElementById('stage-formula');
+
+            if (currentPipelineStep === 1) {
+                stageTag.innerText = "Stage 1: Raw Touch Input";
+                headline.innerText = "Capturing Raw Coordinates";
+                desc.innerText = "When a player draws a stroke on mobile or desktop, input events fire at varying rates. Fast drawings produce sparse points; slow drawings produce dense points.";
+                formula.innerText = "Points = [(x₀, y₀), (x₁, y₁), ..., (xₘ, yₘ)]";
+            } else if (currentPipelineStep === 2) {
+                stageTag.innerText = "Stage 2: Arc-Length Resampling";
+                headline.innerText = "Resampling to N Equidistant Points";
+                desc.innerText = "To allow direct point-to-point comparison regardless of drawing speed, the stroke path length is calculated and divided into exactly N (e.g. 32) equidistant points.";
+                formula.innerText = "Interval I = PathLength / (N - 1)\nq = p₁ + ((I - D) / d) * (p₂ - p₁)";
+            } else if (currentPipelineStep === 3) {
+                stageTag.innerText = "Stage 3: Tangent Trajectory Angles";
+                headline.innerText = "Adding Direction Awareness ($P+)";
+                desc.innerText = "Unlike standard $P, $P+ calculates the directional tangent angle θ at each point. This prevents a circle drawn clockwise from matching a circle drawn counter-clockwise if direction matters.";
+                formula.innerText = "θᵢ = atan2(yᵢ₊₁ - yᵢ₋₁, xᵢ₊₁ - xᵢ₋₁)";
+            } else if (currentPipelineStep === 4) {
+                stageTag.innerText = "Stage 4: Scale & Origin Centering";
+                headline.innerText = "Normalizing Scale & Position";
+                desc.innerText = "The resampled points are scaled non-uniformly to fit inside a standard 250x250 square box, then shifted so the shape's centroid rests at (0,0). Tiny drawn triangles now match huge triangles.";
+                formula.innerText = "q.x = ((p.x - minX) / scale) * 250\nCentroid Translation: p' = p - Centroid";
+            } else if (currentPipelineStep === 5) {
+                stageTag.innerText = "Stage 5: Point Cloud Bipartite Pairing";
+                headline.innerText = "Computing Point Cloud Distance";
+                desc.innerText = "The algorithm pairs points from the candidate cloud with points in the target template cloud using Greedy Assignment, adding an angular difference penalty for directional mismatch.";
+                formula.innerText = "Cost(Aᵢ, Bⱼ) = EuclideanDist(Aᵢ, Bⱼ) + (Δθ / π) * 25.0\nScore = (1 - AvgDist / MaxDist) * 100%";
+            }
+        }
+
+        function renderPipelineCanvas() {
+            if (!pipelineCanvas) return;
+            let rect = pipelineCanvas.getBoundingClientRect();
+            pipelineCtx.clearRect(0, 0, rect.width, rect.height);
+
+            if (pipelineStroke.length === 0) return;
+
+            let pts = pipelineStroke;
+            let len = pathLength(pts).toFixed(1);
+            document.getElementById('metric-points').innerText = `${pts.length} pts`;
+            document.getElementById('metric-length').innerText = `${len} px`;
+
+            if (currentPipelineStep === 1) {
+                drawStroke(pipelineCtx, pts, '#38bdf8', 4, true);
+                for (let p of pts) {
+                    pipelineCtx.beginPath();
+                    pipelineCtx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    pipelineCtx.fillStyle = '#06b6d4';
+                    pipelineCtx.fill();
+                }
+            } else if (currentPipelineStep === 2) {
+                drawStroke(pipelineCtx, pts, '#334155', 2, false);
+                let resampled = resample(pts, CONFIG.samplePoints);
+                for (let i = 0; i < resampled.length; i++) {
+                    let p = resampled[i];
+                    pipelineCtx.beginPath();
+                    pipelineCtx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                    pipelineCtx.fillStyle = i === 0 ? '#22c55e' : '#f43f5e';
+                    pipelineCtx.fill();
+                    pipelineCtx.strokeStyle = '#ffffff';
+                    pipelineCtx.lineWidth = 1.5;
+                    pipelineCtx.stroke();
+                }
+            } else if (currentPipelineStep === 3) {
+                let resampled = resample(pts, CONFIG.samplePoints);
+                computeTrajectoryAngles(resampled);
+                drawStroke(pipelineCtx, resampled, '#0284c7', 3, false);
+
+                for (let p of resampled) {
+                    pipelineCtx.beginPath();
+                    pipelineCtx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    pipelineCtx.fillStyle = '#a855f7';
+                    pipelineCtx.fill();
+
+                    let arrowLen = 18;
+                    let ax = p.x + Math.cos(p.angle) * arrowLen;
+                    let ay = p.y + Math.sin(p.angle) * arrowLen;
+
+                    pipelineCtx.beginPath();
+                    pipelineCtx.moveTo(p.x, p.y);
+                    pipelineCtx.lineTo(ax, ay);
+                    pipelineCtx.strokeStyle = '#a855f7';
+                    pipelineCtx.lineWidth = 2;
+                    pipelineCtx.stroke();
+                }
+            } else if (currentPipelineStep === 4) {
+                let norm = normalizeGesture(pts, CONFIG.samplePoints);
+                let cx = rect.width / 2;
+                let cy = rect.height / 2;
+
+                pipelineCtx.strokeStyle = 'rgba(6, 182, 212, 0.3)';
+                pipelineCtx.lineWidth = 1;
+                pipelineCtx.strokeRect(cx - 125, cy - 125, 250, 250);
+
+                pipelineCtx.beginPath();
+                for (let i = 0; i < norm.length; i++) {
+                    let vx = cx + norm[i].x;
+                    let vy = cy + norm[i].y;
+                    if (i === 0) pipelineCtx.moveTo(vx, vy);
+                    else pipelineCtx.lineTo(vx, vy);
+                }
+                pipelineCtx.strokeStyle = '#38bdf8';
+                pipelineCtx.lineWidth = 3;
+                pipelineCtx.stroke();
+
+                for (let p of norm) {
+                    pipelineCtx.beginPath();
+                    pipelineCtx.arc(cx + p.x, cy + p.y, 4, 0, Math.PI * 2);
+                    pipelineCtx.fillStyle = '#f43f5e';
+                    pipelineCtx.fill();
+                }
+            } else if (currentPipelineStep === 5) {
+                let candidateNorm = normalizeGesture(pts, CONFIG.samplePoints);
+                let cx = rect.width / 2;
+                let cy = rect.height / 2;
+
+                let tmplNorm = templates.length > 0 ? templates[0].normalizedPoints : candidateNorm;
+
+                for (let p of tmplNorm) {
+                    pipelineCtx.beginPath();
+                    pipelineCtx.arc(cx + p.x, cy + p.y, 5, 0, Math.PI * 2);
+                    pipelineCtx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                    pipelineCtx.fill();
+                }
+
+                for (let i = 0; i < candidateNorm.length; i++) {
+                    let p1 = candidateNorm[i];
+                    let p2 = tmplNorm[i % tmplNorm.length];
+
+                    let x1 = cx + p1.x;
+                    let y1 = cy + p1.y;
+                    let x2 = cx + p2.x;
+                    let y2 = cy + p2.y;
+
+                    pipelineCtx.beginPath();
+                    pipelineCtx.moveTo(x1, y1);
+                    pipelineCtx.lineTo(x2, y2);
+                    pipelineCtx.strokeStyle = 'rgba(6, 182, 212, 0.5)';
+                    pipelineCtx.lineWidth = 1;
+                    pipelineCtx.setLineDash([2, 2]);
+                    pipelineCtx.stroke();
+                    pipelineCtx.setLineDash([]);
+
+                    pipelineCtx.beginPath();
+                    pipelineCtx.arc(x1, y1, 4, 0, Math.PI * 2);
+                    pipelineCtx.fillStyle = '#06b6d4';
+                    pipelineCtx.fill();
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initCanvases();
+            initPipelineCanvas();
+            resetDefaultTemplates();
+        });
+    </script>
+</body>
+</html>
